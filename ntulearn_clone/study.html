@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NorthStar - AI Dashboard</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="ns-app">
+    <!-- Cinematic Overlay for transition in/out -->
+    <div id="cinematic-overlay">
+        <svg class="cinematic-svg" width="100%" height="100%">
+            <defs>
+                <mask id="hole-mask">
+                    <rect width="100%" height="100%" fill="white" />
+                    <circle id="hole-circle" cx="50%" cy="50%" r="0" fill="black" />
+                </mask>
+            </defs>
+            <rect id="cinematic-bg-rect" width="100%" height="100%" fill="black" mask="url(#hole-mask)" />
+        </svg>
+        <div id="cinematic-stars"></div>
+    </div>
+
+    <div class="ns-app-layout">
+        <!-- Collapsible Sidebar -->
+        <aside id="ns-sidebar" class="ns-sidebar expanded">
+            <div class="ns-sidebar-header">
+                <div class="ns-logo-mark">
+                    <img src="assets/logo.svg" alt="NorthStar Logo" style="height: 48px; width: auto; max-width: 100%;">
+                </div>
+            </div>
+
+            <!-- Default Navigation -->
+            <nav class="ns-sidebar-nav" id="ns-nav-default">
+                <ul class="ns-nav-list">
+
+                    <!-- My Courses -->
+                    <li class="ns-nav-item active" data-target="view-courses" style="cursor:pointer;"
+                        title="My Courses">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                            fill="none">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                        <span class="ns-nav-label">My Courses</span>
+                    </li>
+
+                    <!-- AI Study Coach -->
+                    <li class="ns-nav-item" data-target="view-aicoach" style="cursor:pointer;" title="AI Study Coach">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span class="ns-nav-label">AI Coach</span>
+                    </li>
+                    <!-- Exam Readiness -->
+                    <li class="ns-nav-item" data-target="view-readiness" style="cursor:pointer;" title="Exam Readiness">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                        <span class="ns-nav-label">Exam Readiness</span>
+                    </li>
+
+                </ul>
+            </nav>
+
+            <div class="ns-sidebar-footer">
+                <button class="ns-icon-btn" title="Settings">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                </button>
+                <button class="ns-icon-btn" id="ns-sidebar-collapse" title="Collapse Sidebar">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        id="ns-collapse-icon">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="ns-main-content">
+            <!-- Top Header (Minimal) -->
+            <header class="ns-main-header">
+                <div class="ns-header-left">
+                    <h2 id="ns-page-title">My Courses</h2>
+                </div>
+                <div class="ns-header-right" style="display: flex; align-items: center; gap: 16px;">
+                    <a href="index.html" class="north-star-toggle active" title="Exit Study Mode" style="text-decoration: none;">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </a>
+                    <button class="ns-icon-btn" title="Notifications">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                            fill="none">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </button>
+                    <div class="ns-user-avatar">
+                        <img src="https://ui-avatars.com/api/?name=Janet&background=6B46C1&color=fff" alt="User">
+                    </div>
+                </div>
+            </header>
+
+            <div class="ns-view-container">
+
+                <!-- VIEW 1: MY COURSES -->
+                <section id="view-courses" class="ns-view active">
+                    <div class="ns-dashboard-top">
+                        <div class="ns-card ns-greeting-card">
+                            <h3 id="ns-greeting-text">Good evening, Janet</h3>
+                            <p>You're on track for your weekly goal.</p>
+                        </div>
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Readiness Score</div>
+                            <div class="ns-stat-value" id="ns-stat-readiness">92<span class="ns-stat-sub">/100</span>
+                            </div>
+                            <div class="ns-stat-trend positive" id="ns-stat-readiness-trend">↑ 4 pts this week</div>
+                        </div>
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Predicted Score</div>
+                            <div class="ns-stat-value" id="ns-stat-predicted">88<span class="ns-stat-sub">%</span></div>
+                            <div class="ns-stat-trend" id="ns-stat-predicted-trend">Projected: 82 → 88</div>
+                        </div>
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Focus Time</div>
+                            <div class="ns-stat-value" id="ns-stat-focus">4h 20m</div>
+                            <div class="ns-stat-trend">This week</div>
+                        </div>
+                        <!-- Widgets injected by widget.js -->
+                    </div>
+
+                    <div class="ns-courses-layout">
+                        <div class="ns-courses-main">
+                            <h3 class="ns-section-title">Current Courses</h3>
+                            <div class="ns-courses-grid" id="ns-courses-grid">
+                                <!-- Injected by app.js -->
+                            </div>
+                        </div>
+                        <aside class="ns-courses-sidebar">
+                            <!-- Widgets injected by widget.js -->
+                        </aside>
+                    </div>
+                </section>
+
+                <!-- VIEW X: COURSE ANALYTICS -->
+                <section id="view-course-analytics" class="ns-view">
+                    <div class="ns-analytics-header">
+                        <button class="ns-btn-secondary" id="btn-back-courses" style="margin-bottom: 16px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2"
+                                fill="none">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Back to Courses
+                        </button>
+                        <div class="ns-analytics-title-group">
+                            <h2 id="ns-analytics-course-code">SC3010</h2>
+                            <h3 id="ns-analytics-course-title" style="color: var(--ns-text-muted); font-weight: 500;">
+                                Computer Security</h3>
+                        </div>
+                        <p class="ns-analytics-subtitle"
+                            style="color: var(--ns-primary); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 8px;">
+                            Weekly analytics & mastery</p>
+                    </div>
+
+                    <div class="ns-dashboard-top" style="margin-top:24px;">
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Readiness Score</div>
+                            <div class="ns-stat-value" id="ns-analytics-readiness">--<span
+                                    class="ns-stat-sub">/100</span></div>
+                            <div class="ns-stat-trend" id="ns-analytics-readiness-trend">--</div>
+                        </div>
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Predicted Score</div>
+                            <div class="ns-stat-value" id="ns-analytics-predicted">--<span class="ns-stat-sub">%</span>
+                            </div>
+                            <div class="ns-stat-trend" id="ns-analytics-predicted-trend">--</div>
+                        </div>
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Focus Time</div>
+                            <div class="ns-stat-value" id="ns-analytics-focus">--</div>
+                            <div class="ns-stat-trend">This week</div>
+                        </div>
+                        <div class="ns-card ns-stat-card">
+                            <div class="ns-stat-title">Requires Attention</div>
+                            <div class="ns-stat-value" id="ns-analytics-attention-count"
+                                style="color: var(--ns-danger);">--</div>
+                            <div class="ns-stat-trend">Flagged concepts</div>
+                        </div>
+                    </div>
+
+                    <div class="ns-courses-layout" style="margin-top:24px;">
+                        <!-- Left 2/3 -->
+                        <div class="ns-courses-main">
+                            <!-- Attention Needs -->
+                            <div class="ns-card" style="margin-bottom:24px; padding: 24px;">
+                                <h3 class="ns-section-title" style="margin-bottom:16px;">Requires Attention</h3>
+                                <div class="ns-attention-list" id="ns-analytics-attention-list"
+                                    style="display: flex; flex-direction: column; gap: 12px;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Prescriptive Plan -->
+                            <div class="ns-card" style="padding: 24px;">
+                                <div
+                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap: wrap; gap: 12px;">
+                                    <div>
+                                        <h3 class="ns-section-title" style="margin-bottom:4px;">Prescriptive Plan</h3>
+                                        <p style="margin:0; font-size: 0.85rem; color: var(--ns-text-muted);">What to do
+                                            next, ordered by priority</p>
+                                    </div>
+                                    <div class="ns-table-filters" id="ns-analytics-filters"
+                                        style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                        <!-- Filters -->
+                                    </div>
+                                </div>
+                                <div id="ns-analytics-table-body"
+                                    style="display: flex; flex-direction: column; gap: 0;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right 1/3 -->
+                        <aside class="ns-courses-sidebar">
+                            <div class="ns-card" id="ns-course-readiness-card" style="padding: 20px;">
+                                <h3 style="margin: 0 0 4px 0;">Exam Readiness</h3>
+                                <p style="margin: 0 0 16px 0; font-size: 0.85rem; color: var(--ns-text-muted);">Based on current mastery state</p>
+                                <div id="ns-course-readiness-gauge"><!-- injected by JS --></div>
+                            </div>
+                            <div class="ns-card ns-insights-card">
+                                <h3>Quick Insights</h3>
+                                <ul class="ns-insights-list" id="ns-analytics-insights-list">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                        </aside>
+                    </div>
+
+                </section>
+
+                <!-- VIEW 2: PROFILE -->
+                <section id="view-profile" class="ns-view">
+                    <div class="ns-profile-layout">
+                        <div class="ns-profile-main">
+                            <div class="ns-card ns-profile-header">
+                                <img src="https://ui-avatars.com/api/?name=Janet&background=6B46C1&color=fff&size=128"
+                                    alt="User" class="ns-profile-avatar-large">
+                                <div class="ns-profile-info">
+                                    <h2>Janet Connor</h2>
+                                    <p class="ns-profile-major">B.S. Computer Science</p>
+                                    <p class="ns-profile-goal">Goal: AI Research / Dean's List</p>
+                                </div>
+                            </div>
+                            <div class="ns-card ns-profile-stats">
+                                <h3>Cognitive Efficiency</h3>
+                                <div class="ns-efficiency-graph">
+                                    <div class="ns-graph-bar" style="height: 40%;" title="Mon"></div>
+                                    <div class="ns-graph-bar" style="height: 70%;" title="Tue"></div>
+                                    <div class="ns-graph-bar" style="height: 100%;" title="Wed"></div>
+                                    <div class="ns-graph-bar" style="height: 60%;" title="Thu"></div>
+                                    <div class="ns-graph-bar" style="height: 85%;" title="Fri"></div>
+                                    <div class="ns-graph-bar" style="height: 30%;" title="Sat"></div>
+                                    <div class="ns-graph-bar" style="height: 90%;" title="Sun"></div>
+                                </div>
+                                <div class="ns-efficiency-labels">
+                                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ns-profile-sidebar">
+                            <div class="ns-card ns-vark-card">
+                                <h3>Learning Style</h3>
+                                <div class="ns-vark-result">🔍 Visual (45%)</div>
+                                <p>You learn best through diagrams, charts, and spatial organization.</p>
+                            </div>
+                            <div class="ns-card ns-strengths-card">
+                                <h3>Strengths</h3>
+                                <ul>
+                                    <li>Algorithmic Thinking</li>
+                                    <li>Deep Learning Concepts</li>
+                                </ul>
+                                <h3 style="margin-top: 16px;">Weaknesses</h3>
+                                <ul>
+                                    <li>Statistical Proofs</li>
+                                    <li>Memory Retention (Syntax)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: EXAM READINESS -->
+                <section id="view-readiness" class="ns-view">
+                    <div style="max-width: 900px;">
+                        <h2 style="margin: 0 0 6px 0;">Exam Readiness</h2>
+                        <p style="margin: 0 0 28px 0; color: var(--ns-text-muted); font-size: 0.95rem;">Your predicted exam scores across all courses, based on current mastery state.</p>
+                        <div id="ns-readiness-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;">
+                            <!-- Injected by renderExamReadinessView() -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: AI STUDY COACH -->
+                <section id="view-aicoach" class="ns-view">
+                    <div style="max-width: 720px; display: flex; flex-direction: column; height: calc(100vh - 140px);">
+                        <h2 style="margin: 0 0 4px 0;">AI Study Coach</h2>
+                        <p style="margin: 0 0 20px 0; color: var(--ns-text-muted); font-size: 0.95rem;">Ask anything about what to study, where to focus, or how to improve your score.</p>
+                        <div id="ns-coach-messages" style="
+                            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+                            padding: 20px; background: var(--ns-bg); border-radius: 16px; margin-bottom: 16px;">
+                            <div class="ns-coach-msg ns-coach-msg-assistant">
+                                <strong>AI Coach</strong>
+                                <p>Hi Janet! I can see your mastery data across all your courses. Ask me anything — for example:<br>
+                                <em>"What should I study today?"</em> · <em>"Which topic gives me the most marks?"</em> · <em>"How ready am I for SC3010?"</em></p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input id="ns-coach-input" type="text" placeholder="Ask your study coach…" style="
+                                flex: 1; padding: 12px 16px; border-radius: 12px;
+                                border: 1.5px solid var(--ns-sidebar-border); background: var(--ns-surface);
+                                color: var(--ns-text-main); font-size: 0.95rem; outline: none;"
+                                onkeydown="if(event.key==='Enter') sendCoachMessage()" />
+                            <button class="ns-btn-primary" onclick="sendCoachMessage()" style="padding: 12px 20px; border-radius: 12px;">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 4: DEEP DIVE (Khan Academy Style 3-Column Layout) -->
+                <section id="view-deepdive" class="ns-view ns-view-full">
+                    <!-- Top Area (Minimal breadcrumb or title) -->
+                    <div class="ns-deepdive-header">
+                        <div class="ns-breadcrumb" id="ns-dd-breadcrumb">Physics &gt; Forces and Newton's laws of motion
+                        </div>
+                        <h2 id="ns-dd-title" style="margin: 8px 0 0 0;">Non-contact interactions</h2>
+                    </div>
+
+                    <div class="ns-ka-layout">
+                        <!-- Left Column: Units/Sections -->
+                        <aside class="ns-ka-left">
+                            <h3 class="ns-ka-col-title">Units</h3>
+                            <ul id="ns-ka-units-list" class="ns-ka-nav-list">
+                                <!-- Injected by JS -->
+                            </ul>
+                        </aside>
+
+                        <!-- Center Column: Lesson Content -->
+                        <div class="ns-ka-center">
+                            <div class="ns-lesson-header">
+                                <h3 id="ns-lesson-title" class="ns-lesson-title">Welcome</h3>
+                                <p id="ns-lesson-desc" class="ns-lesson-desc">Select a unit from the left to begin.</p>
+                            </div>
+
+                            <div class="ns-learn-section" id="ns-learn-section" style="display:none;">
+                                <h4 class="ns-learn-title">Learn</h4>
+                                <ul id="ns-lesson-items" class="ns-lesson-items-list">
+                                    <!-- Injected by JS -->
+                                </ul>
+                            </div>
+
+                            <!-- Dynamic Content Viewer (Video/Reading) -->
+                            <div id="ns-content-viewer" class="ns-content-viewer hidden">
+                                <div id="ns-content-inner"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Practice / Quiz -->
+                        <aside class="ns-ka-right">
+                            <h3 class="ns-ka-col-title">Practice</h3>
+                            <div id="ns-practice-container" class="ns-practice-list">
+                                <!-- Injected by JS -->
+                            </div>
+                            <div class="ns-card ns-mastery-check-box hidden" id="ns-mastery-box">
+                                <h4>End of Topic</h4>
+                                <p style="font-size:0.9rem; color:var(--ns-text-muted); margin: 8px 0 16px 0;">Ready to
+                                    test your knowledge?</p>
+                                <button id="ns-start-quiz-btn" class="ns-btn-primary full-width">Mastery Check</button>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+
+                <!-- QUIZ MODAL -->
+                <div id="ns-quiz-modal" class="ns-modal hidden">
+                    <div class="ns-modal-overlay"></div>
+                    <div class="ns-modal-content ns-modal-lg">
+                        <div class="ns-quiz-header">
+                            <div class="ns-quiz-progress-bar">
+                                <div id="ns-quiz-progress-fill" class="ns-quiz-progress-fill" style="width: 20%"></div>
+                            </div>
+                            <span id="ns-quiz-progress-text">Question 1 of 5</span>
+                        </div>
+                        <div id="ns-quiz-body" class="ns-quiz-body">
+                            <!-- Injected by JS -->
+                        </div>
+                        <div class="ns-quiz-footer">
+                            <div id="ns-quiz-feedback" class="ns-quiz-feedback"></div>
+                            <button id="ns-quiz-next" class="ns-btn-primary" disabled>Check Answer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── Off-Canvas Concept Details Drawer (outside .ns-view to avoid transform stacking context) ── -->
+    <div id="ns-concept-drawer" class="ns-drawer-overlay hidden">
+        <div class="ns-drawer">
+            <div class="ns-drawer-header">
+                <div>
+                    <h3 id="ns-drawer-title" style="margin: 0; font-size: 1.25rem;">Concept Title</h3>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;" id="ns-drawer-badges"></div>
+                </div>
+                <button id="btn-close-drawer" class="ns-icon-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="ns-drawer-body">
+                <div class="ns-drawer-section">
+                    <h4>Mastery</h4>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                        <div class="ns-progress-bar-bg" style="flex: 1; height: 8px;">
+                            <div class="ns-progress-bar-fill" id="ns-drawer-mastery-fill" style="width: 0%"></div>
+                        </div>
+                        <span id="ns-drawer-mastery-text" style="font-weight: 700; font-size: 1rem;">0%</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--ns-text-muted); margin-top: 8px;">Exam Weight: <strong id="ns-drawer-weight">--</strong></p>
+                </div>
+                <div class="ns-drawer-section">
+                    <h4>Prerequisites</h4>
+                    <ul class="ns-prereq-list" id="ns-drawer-prereqs"></ul>
+                </div>
+                <div class="ns-drawer-section">
+                    <h4>Recommendation</h4>
+                    <div class="ns-recommendation-box" id="ns-drawer-recommendation"></div>
+                </div>
+            </div>
+            <div class="ns-drawer-footer" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="widget.js?v=2"></script>
+</body>
+
+</html>

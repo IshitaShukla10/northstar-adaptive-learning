@@ -1,0 +1,33 @@
+# Environment
+.env
+.env.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+
+# Database (runtime-generated — recreated on first boot)
+study_mode.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Cache
+.audio_cache/
+.DS_Store
+src/.DS_Store
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Misc
+main_remote.py
