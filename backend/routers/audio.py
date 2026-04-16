@@ -49,7 +49,7 @@ async def generate_audio(notebook_id: int):
     from sqlalchemy import select
     from backend.database import AsyncSessionLocal, Notebook
     from backend.pdf_utils import extract_full_text
-    from lecture import generate_audio_lecture_mp3
+    from integration.lecture import generate_audio_lecture_mp3
 
     # Look up notebook to get source_ref
     async with AsyncSessionLocal() as db:

@@ -1,5 +1,6 @@
 """
 demo_integration.py — Full end-to-end integration demo.
+Run from the project root: python scripts/demo_integration.py
 
 Shows the complete study loop:
   1. Student completes kinesthetic activities   (Sia's /generate-kinesthetic + /grade-kinesthetic)
@@ -8,21 +9,20 @@ Shows the complete study loop:
   4. Bridge converts mastery → Sia's Concept payload              (bridge)
   5. generate_weekly_report() produces analytics + score forecast (P4)
   6. TimetableEngine generates a 7-day Pomodoro schedule          (P3)
-
-Run:
-    source .venv/bin/activate
-    python demo_integration.py
 """
 
 import os
 import sys
 from datetime import date, datetime, timedelta
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+# Add project root and src/ to path
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from learning_model import MasteryEngine
 from scheduler import AvailabilityWindow, TimetableEngine
-from bridge import (
+from integration.bridge import (
     build_knowledge_graph,
     grade_to_quiz_responses,
     load_curriculum_meta,
@@ -30,7 +30,7 @@ from bridge import (
     load_topic_mastery,
     mastery_to_concepts_payload,
 )
-from insights import generate_weekly_report
+from integration.insights import generate_weekly_report
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 0. Setup
@@ -54,7 +54,7 @@ exam_weights    = load_exam_weights()
 curriculum_meta = load_curriculum_meta()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Load Sia's topic mastery from CSV (replaces /grade-kinesthetic output)
+# 1. Load Sia's topic mastery from CSV
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n── Step 1: Topic mastery scores (loaded from topic_mastery.csv) ──")
 
@@ -129,13 +129,13 @@ timetable = TimetableEngine(
 )
 
 availability = [
-    AvailabilityWindow(day_of_week=0, available_hours=3.0),   # Mon
-    AvailabilityWindow(day_of_week=1, available_hours=3.0),   # Tue
-    AvailabilityWindow(day_of_week=2, available_hours=3.0),   # Wed
-    AvailabilityWindow(day_of_week=3, available_hours=3.0),   # Thu
-    AvailabilityWindow(day_of_week=4, available_hours=2.5),   # Fri
-    AvailabilityWindow(day_of_week=5, available_hours=4.0),   # Sat
-    AvailabilityWindow(day_of_week=6, available_hours=4.0),   # Sun
+    AvailabilityWindow(day_of_week=0, available_hours=3.0),
+    AvailabilityWindow(day_of_week=1, available_hours=3.0),
+    AvailabilityWindow(day_of_week=2, available_hours=3.0),
+    AvailabilityWindow(day_of_week=3, available_hours=3.0),
+    AvailabilityWindow(day_of_week=4, available_hours=2.5),
+    AvailabilityWindow(day_of_week=5, available_hours=4.0),
+    AvailabilityWindow(day_of_week=6, available_hours=4.0),
 ]
 
 exam_date = date.today() + timedelta(days=14)
@@ -188,9 +188,9 @@ print("\n── Step 7: After one study session — next quiz cycle ──")
 print("  (simulating improved scores after studying buffer_overflow & reference_monitor)")
 
 next_quiz_results = {
-    "buffer_overflow":      0.62,   # improved from 0.41 → 0.62
-    "reference_monitor":    0.55,   # improved from 0.35 → 0.55
-    "integer_overflow":     0.51,   # slight improvement
+    "buffer_overflow":      0.62,
+    "reference_monitor":    0.55,
+    "integer_overflow":     0.51,
 }
 
 new_responses = grade_to_quiz_responses(next_quiz_results, STUDENT, SUBJECT)

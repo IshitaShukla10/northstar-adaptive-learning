@@ -41,7 +41,7 @@ async def generate_quiz(notebook_id: int):
     from sqlalchemy import select
     from backend.database import AsyncSessionLocal, Notebook, KinestheticPlan
     from backend.pdf_utils import extract_full_text
-    from kinesthetics import generate_kinesthetic_plan
+    from integration.kinesthetics import generate_kinesthetic_plan
     import json
 
     async with AsyncSessionLocal() as db:
@@ -111,9 +111,9 @@ async def generate_quiz(notebook_id: int):
 #     Grade a completed quiz submission and return scores.
 #     Also pushes topic mastery into the MasteryEngine so study schedules update.
 #     """
-#     from kinesthetics import compute_kms
-#     from engine_state import get_shared_engine
-#     from bridge import grade_to_quiz_responses
+#     from integration.kinesthetics import compute_kms
+#     from integration.engine_state import get_shared_engine
+#     from integration.bridge import grade_to_quiz_responses
 
 #     result = compute_kms(
 #         payload.plan,
@@ -142,9 +142,9 @@ async def grade_quiz(payload: GradeRequest = Body(...)):
     Also pushes topic mastery into the MasteryEngine so study schedules update.
     Also saves detailed quiz results to CSV.
     """
-    from kinesthetics import compute_kms, compute_topic_mastery, save_quiz_results_to_csv
-    from engine_state import get_shared_engine
-    from bridge import grade_to_quiz_responses
+    from integration.kinesthetics import compute_kms, compute_topic_mastery, save_quiz_results_to_csv
+    from integration.engine_state import get_shared_engine
+    from integration.bridge import grade_to_quiz_responses
 
     # 1. Compute scores
     result = compute_kms(
@@ -168,7 +168,7 @@ async def grade_quiz(payload: GradeRequest = Body(...)):
     # 3b. Upsert aggregated mastery into topic_mastery.csv (real-time CSV sync)
     if topic_mastery:
         try:
-            from bridge import update_topic_mastery_csv
+            from integration.bridge import update_topic_mastery_csv
             update_topic_mastery_csv(
                 student_id=payload.student_id,
                 subject=payload.subject,
@@ -263,8 +263,8 @@ async def record_session_events(payload: SessionEventsRequest = Body(...)):
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
     from scheduler import CognitiveLoadTracker
     from scheduler.models import SessionEvent
-    from engine_state import get_shared_engine
-    from bridge import session_event_to_quiz_responses
+    from integration.engine_state import get_shared_engine
+    from integration.bridge import session_event_to_quiz_responses
     from datetime import datetime
 
     if not payload.events:

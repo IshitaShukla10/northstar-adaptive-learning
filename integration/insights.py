@@ -120,18 +120,11 @@ def forgetting_risk(concept: Concept, cfg: ReportConfig, now: Optional[datetime]
     return float(min(1.0, max(0.0, r)))
 
 def priority_score(concept: Concept, cfg: ReportConfig, now: Optional[datetime] = None) -> float:
-    """
-    Priority should increase when:
-      - exam_weightage high
-      - mastery low
-      - forgetting risk high
-    """
     now = now or _now_utc()
     w = max(0.0, float(concept.exam_weightage))
     m = float(min(1.0, max(0.0, concept.mastery)))
     fr = forgetting_risk(concept, cfg, now=now)
 
-    # weighted blend (so it's not killed when fr is low)
     weakness = (cfg.mastery_weight * (1.0 - m)) + (cfg.forgetting_weight * fr)
     return w * weakness
 
@@ -166,12 +159,6 @@ def simulate_mastery_gain(concept: Concept, minutes: int, cfg: ReportConfig) -> 
 # -----------------------------
 
 def build_prescriptive_plan(concepts: List[Concept], cfg: ReportConfig, now: Optional[datetime] = None) -> Dict[str, Any]:
-    """
-    Returns:
-      - recommendations: list of actions
-      - allocations: minutes per concept
-      - diagnosis_top: why you're stuck
-    """
     now = now or _now_utc()
     ranked = sorted(concepts, key=lambda c: priority_score(c, cfg, now=now), reverse=True)
 
@@ -180,7 +167,6 @@ def build_prescriptive_plan(concepts: List[Concept], cfg: ReportConfig, now: Opt
     recommendations = []
     diagnosis_top = []
 
-    # allocate time across top concepts
     for c in ranked:
         if budget <= 0:
             break
@@ -189,7 +175,6 @@ def build_prescriptive_plan(concepts: List[Concept], cfg: ReportConfig, now: Opt
         if ps <= 0:
             continue
 
-        # more time if mastery very low
         base = 45
         if c.mastery < 0.3:
             base = 75
@@ -212,7 +197,7 @@ def build_prescriptive_plan(concepts: List[Concept], cfg: ReportConfig, now: Opt
             ]
         elif fr > 0.6:
             action_type = "revise"
-            rationale = "You know it, but you’re likely to forget it soon. Quick revision stabilizes memory."
+            rationale = "You know it, but you're likely to forget it soon. Quick revision stabilizes memory."
             steps = [
                 "Skim notes (10–15 min).",
                 "Do 3–5 quick questions.",
@@ -236,7 +221,6 @@ def build_prescriptive_plan(concepts: List[Concept], cfg: ReportConfig, now: Opt
             "next_steps": steps
         })
 
-        # diagnosis entry
         reasons = []
         if c.mastery < 0.4:
             reasons.append("Low mastery (not yet internalized).")
@@ -292,20 +276,17 @@ def generate_weekly_report(
 
     concepts = _concepts_from_payload(concepts_raw)
 
-    # ALWAYS normalize unless you explicitly turn it off
     if cfg.normalize_weightages:
         concepts = normalize_exam_weightages(concepts)
 
     base_expected = expected_score(concepts)
 
-    # simulate current pace: allocate time proportional to weakness
     ranked = sorted(concepts, key=lambda c: priority_score(c, cfg, now=now), reverse=True)
     denom = sum(priority_score(c, cfg, now=now) for c in ranked) or 1.0
     alloc_current = {c.id: int(round(current_weekly_minutes * priority_score(c, cfg, now=now) / denom)) for c in ranked}
     sim_a = simulate_with_allocations(concepts, alloc_current, cfg)
     expected_a = expected_score(sim_a)
 
-    # recommended plan + simulation
     prescriptive = build_prescriptive_plan(concepts, cfg, now=now)
     sim_b = simulate_with_allocations(concepts, prescriptive["allocations"], cfg)
     expected_b = expected_score(sim_b)

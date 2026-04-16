@@ -166,7 +166,7 @@ async def study_coach(payload: StudyCoachRequest):
         # Fallback: try the BKT engine (may be cold / empty)
         context_lines: list[str] = []
         try:
-            from engine_state import get_shared_engine
+            from integration.engine_state import get_shared_engine
             engine = get_shared_engine()
             mastery_state = engine.get_mastery_state(payload.student_id, payload.subject)
             weak = engine.get_weak_concepts(payload.student_id, payload.subject)

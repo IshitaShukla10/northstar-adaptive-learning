@@ -41,7 +41,7 @@ def _get_engine_store() -> Dict:
     Raises HTTPException 503 if engine is not yet initialised.
     """
     try:
-        from engine_state import get_shared_engine
+        from integration.engine_state import get_shared_engine
         engine, _ = get_shared_engine()
         return engine._store
     except Exception as exc:
@@ -133,7 +133,7 @@ async def population_insights(subject: Optional[str] = None) -> Dict[str, Any]:
     # Identify concepts whose weakness strongly co-occurs with weak prerequisites.
     # We load curriculum metadata to know the prerequisite graph.
     try:
-        from bridge import load_curriculum_meta
+        from integration.bridge import load_curriculum_meta
         curriculum_meta = load_curriculum_meta()
     except Exception:
         curriculum_meta = {}

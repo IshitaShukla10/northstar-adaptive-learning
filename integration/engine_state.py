@@ -5,7 +5,7 @@ Import get_shared_engine() anywhere in the process to get the same engine
 instance, preserving student mastery state across HTTP requests.
 
 Usage:
-    from engine_state import get_shared_engine
+    from integration.engine_state import get_shared_engine
     engine, kg = get_shared_engine()
 """
 from __future__ import annotations
@@ -16,7 +16,9 @@ import os
 import sys
 from typing import Optional
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+# Project root is one level up from this file (integration/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from learning_model import MasteryEngine  # type: ignore
 
@@ -37,15 +39,12 @@ def _seed_engine_from_csv(engine: MasteryEngine) -> None:
 
     Errors are swallowed so a missing/malformed CSV never prevents startup.
     """
-    base = os.path.dirname(os.path.abspath(__file__))
-
     # ── Pass 1: topic_mastery.csv ──────────────────────────────────────────
-    mastery_path = os.path.join(base, "bridge_data", "topic_mastery.csv")
+    mastery_path = os.path.join(ROOT_DIR, "bridge_data", "topic_mastery.csv")
     if os.path.exists(mastery_path):
         try:
-            from bridge import grade_to_quiz_responses
+            from .bridge import grade_to_quiz_responses
 
-            # Collect unique (student_id, subject) pairs
             student_subjects: dict[tuple[str, str], dict[str, float]] = {}
             with open(mastery_path, newline="", encoding="utf-8") as f:
                 for row in csv.DictReader(f):
@@ -67,10 +66,10 @@ def _seed_engine_from_csv(engine: MasteryEngine) -> None:
             _logger.warning("engine_state: topic_mastery seed skipped — %s", exc)
 
     # ── Pass 2: session_events.csv (finer-grained BKT signal) ─────────────
-    events_path = os.path.join(base, "bridge_data", "session_events.csv")
+    events_path = os.path.join(ROOT_DIR, "bridge_data", "session_events.csv")
     if os.path.exists(events_path):
         try:
-            from bridge import load_session_events, session_event_to_quiz_responses
+            from .bridge import load_session_events, session_event_to_quiz_responses
 
             events = load_session_events(path="bridge_data/session_events.csv")
             responses = session_event_to_quiz_responses(events)
@@ -95,7 +94,7 @@ def get_shared_engine() -> tuple[MasteryEngine, object]:
     """
     global _engine, _kg
     if _engine is None or _kg is None:
-        from bridge import build_knowledge_graph
+        from .bridge import build_knowledge_graph
 
         _kg = build_knowledge_graph()
 
@@ -105,8 +104,6 @@ def get_shared_engine() -> tuple[MasteryEngine, object]:
             openai_model="gpt-4o-mini",
         )
 
-        # Warm the engine with existing CSV data so research endpoints
-        # have real population data from the very first request.
         _seed_engine_from_csv(_engine)
 
     return _engine, _kg

@@ -24,7 +24,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+# Project root is one level up from this file (integration/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from learning_model.models import MasteryState, QuizResponse
 
@@ -57,7 +59,7 @@ def load_curriculum_meta(
     Expected CSV columns:
         concept_id,name,subject,difficulty,prerequisites
     """
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     if not os.path.exists(full_path):
         return {}
@@ -90,7 +92,7 @@ def load_exam_weights(
     Expected CSV columns:
         concept_id,exam_weight
     """
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     if not os.path.exists(full_path):
         return {}
@@ -116,7 +118,7 @@ def load_topic_mastery(
     Expected CSV columns:
         student_id,subject,concept_id,mastery_score
     """
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     if not os.path.exists(full_path):
         return {}
@@ -144,7 +146,7 @@ def load_session_events(
     Expected CSV columns:
         student_id,concept_id,subject,correct,response_time_seconds,timestamp
     """
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     if not os.path.exists(full_path):
         return []
@@ -181,10 +183,9 @@ def build_knowledge_graph(
     """
     from learning_model import KnowledgeGraph
 
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     if not os.path.exists(full_path):
-        from learning_model import KnowledgeGraph
         return KnowledgeGraph()
 
     subjects: Dict[str, list] = {}
@@ -222,16 +223,6 @@ def mastery_to_concepts_payload(
     """
     Convert MasteryEngine's MasteryState into the List[Concept dicts] format
     that insights.generate_weekly_report() expects.
-
-    Args:
-        mastery_state:   from engine.get_mastery_state(student_id, subject)
-        exam_weights:    {concept_id: float 0..1}; if None, loaded from CSV
-        curriculum_meta: from load_curriculum_meta() — provides human names,
-                         prerequisite lists, and difficulty levels; if None,
-                         loaded from CSV
-
-    Returns:
-        List of dicts matching insights.Concept schema.
     """
     exam_weights = exam_weights or load_exam_weights()
     meta = curriculum_meta or load_curriculum_meta()
@@ -241,7 +232,6 @@ def mastery_to_concepts_payload(
     for concept_id, cm in mastery_state.concepts.items():
         m = meta.get(concept_id, {})
 
-        # Convert last_seen (datetime | None) -> ISO string with Z suffix
         last_practiced: Optional[str] = None
         if cm.last_seen:
             dt = cm.last_seen
@@ -259,8 +249,6 @@ def mastery_to_concepts_payload(
             "difficulty": m.get("difficulty", "medium"),
         })
 
-    # Include concepts from exam_weights that aren't yet in mastery state
-    # (engine initialises lazily, so unseen concepts are absent)
     tracked = {c["id"] for c in concepts}
     for concept_id, weightage in exam_weights.items():
         if concept_id not in tracked:
@@ -269,7 +257,7 @@ def mastery_to_concepts_payload(
                 "id": concept_id,
                 "name": m.get("name", concept_id.replace("_", " ").title()),
                 "exam_weightage": float(weightage),
-                "mastery": 0.1,          # BKT prior — not seen yet
+                "mastery": 0.1,
                 "last_practiced_at": None,
                 "prerequisites": m.get("prerequisites", []),
                 "difficulty": m.get("difficulty", "medium"),
@@ -288,17 +276,8 @@ def grade_to_quiz_responses(
     subject: str = "",
 ) -> List[QuizResponse]:
     """
-    Convert kinesthetic/quiz topic mastery scores (the output of
-    compute_topic_mastery() from kinesthetics.py) back into QuizResponse
+    Convert kinesthetic/quiz topic mastery scores back into QuizResponse
     objects that engine.update_from_quiz() can process.
-
-    If topic_mastery is None, it will be loaded from CSV using student_id/subject.
-
-    A mastery_score in [0, 1] is treated as performance probability:
-      correct    = True  if mastery_score >= 0.5
-      error_depth = 1 - mastery_score  (0 = near-perfect, 1 = fundamental gap)
-
-    The BKT update inside engine will shift p_mastery up or down accordingly.
     """
     if topic_mastery is None:
         if not student_id:
@@ -316,7 +295,7 @@ def grade_to_quiz_responses(
                 concept_id=topic_id,
                 subject=subject,
                 correct=(score >= 0.5),
-                response_time_seconds=60.0,   # neutral default
+                response_time_seconds=60.0,
                 timestamp=now,
                 error_depth=round(1.0 - score, 3),
             )
@@ -336,10 +315,6 @@ def session_event_to_quiz_responses(
     """
     Convert SessionEvent objects into QuizResponse objects so that
     study-session interactions can update BKT mastery.
-
-    If events is None, they will be loaded from CSV.
-
-    error_depth defaults to 0.0 because SessionEvent doesn't carry that field.
     """
     if events is None:
         events = load_session_events()
@@ -367,8 +342,7 @@ def load_quiz_results(
     """
     Load quiz_results.csv and convert each question attempt into a SessionEvent.
     """
-
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     events: List[SessionEvent] = []
 
@@ -395,6 +369,7 @@ def load_quiz_results(
 
     return events
 
+
 def update_topic_mastery_csv(
     student_id: str,
     subject: str,
@@ -403,15 +378,8 @@ def update_topic_mastery_csv(
 ) -> None:
     """
     Upsert mastery scores for a student into topic_mastery.csv.
-
-    For each (student_id, subject, concept_id) key:
-      - If a row already exists, update its mastery_score.
-      - If no row exists, append a new one.
-
-    Called automatically after quiz grading so CSV stays in sync with the
-    BKT engine and future cold-start seeds reflect the latest performance.
     """
-    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    full_path = os.path.join(ROOT_DIR, path)
 
     rows: List[Dict[str, str]] = []
     fieldnames = ["student_id", "subject", "concept_id", "mastery_score"]
@@ -423,7 +391,6 @@ def update_topic_mastery_csv(
             if reader.fieldnames:
                 fieldnames = list(reader.fieldnames)
 
-    # Build a positional index for fast lookups
     idx: Dict[tuple, int] = {}
     for i, row in enumerate(rows):
         key = (row["student_id"].strip(), row["subject"].strip(), row["concept_id"].strip())
@@ -454,12 +421,7 @@ def quiz_results_to_quiz_responses(
 ) -> List[QuizResponse]:
     """
     Convert quiz_results.csv attempts into QuizResponse objects for BKT updates.
-
-    If subject is provided it overrides the subject stored in each event.
-    If omitted, each event's own subject field is used (derived from the CSV
-    row's "subject" column, falling back to "computer_security").
     """
-
     if events is None:
         events = load_quiz_results()
 

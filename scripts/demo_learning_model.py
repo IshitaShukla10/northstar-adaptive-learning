@@ -1,6 +1,6 @@
 """
 End-to-end demo of the Learning State Engine.
-Run: python demo_learning_model.py
+Run from the project root: python scripts/demo_learning_model.py
 
 Simulates a student going through quizzes in "computer_security",
 then shows mastery state, priority ranking, predicted scores, and AI insight.
@@ -9,10 +9,13 @@ then shows mastery state, priority ranking, predicted scores, and AI insight.
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+# Add project root and src/ to path
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from learning_model import MasteryEngine
-from bridge import (
+from integration.bridge import (
     build_knowledge_graph,
     load_exam_weights,
     load_session_events,
@@ -42,27 +45,20 @@ STUDENT = "stu_001"
 SUBJECT = "computer_security"
 
 # ------------------------------------------------------------------
-# 3. Load quiz responses from session_events.csv
+# 3. Load quiz responses from CSVs
 # ------------------------------------------------------------------
-# all_events = load_session_events()
-# student_events = [e for e in all_events if e.student_id == STUDENT]
-# responses = session_event_to_quiz_responses(student_events, subject=SUBJECT)
-# Load scheduler session events
 session_events = load_session_events()
 session_events = [e for e in session_events if e.student_id == STUDENT]
 
-# Load quiz results (per-question attempts)
 quiz_events = load_quiz_results()
 quiz_events = [e for e in quiz_events if e.student_id == STUDENT]
 
-# Convert both sources to QuizResponses
 responses_session = session_event_to_quiz_responses(session_events, subject=SUBJECT)
 responses_quiz = quiz_results_to_quiz_responses(quiz_events, subject=SUBJECT)
 
-# Combine them
 responses = responses_session + responses_quiz
 engine.update_from_quiz(responses)
-print(f"Processed {len(responses)} quiz responses (from session_events.csv).\n")
+print(f"Processed {len(responses)} quiz responses.\n")
 
 # ------------------------------------------------------------------
 # 4. Mastery state
@@ -83,11 +79,11 @@ for concept_id, causes in state.causal_weaknesses.items():
     print(kg.format_causal_explanation(concept_id, causes))
 
 # ------------------------------------------------------------------
-# 6. Priority ranking (for scheduler)
+# 6. Priority ranking
 # ------------------------------------------------------------------
 exam_weights = load_exam_weights()
 
-print("\n=== Priority Ranking (for Chavi's Scheduler) ===")
+print("\n=== Priority Ranking ===")
 priorities = engine.get_priority_ranking(STUDENT, SUBJECT, exam_weights, days_until_exam=14)
 for i, p in enumerate(priorities, 1):
     print(f"  #{i} {p.concept_id:35s} score={p.score:.3f}  mastery={p.mastery:.0%}  risk={p.forgetting_risk:.0%}")

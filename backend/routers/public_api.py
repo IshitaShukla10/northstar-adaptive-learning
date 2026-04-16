@@ -69,7 +69,7 @@ class ScheduleRequest(BaseModel):
 
 def _get_engine():
     try:
-        from engine_state import get_shared_engine
+        from integration.engine_state import get_shared_engine
         engine, kg = get_shared_engine()
         return engine, kg
     except Exception as exc:
@@ -78,7 +78,7 @@ def _get_engine():
 
 def _load_weights() -> Dict[str, float]:
     try:
-        from bridge import load_exam_weights
+        from integration.bridge import load_exam_weights
         return load_exam_weights()
     except Exception:
         return {}

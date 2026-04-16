@@ -15,12 +15,13 @@ Designed to plug into:
     TimetableEngine.generate_plan()
 """
 from __future__ import annotations
+
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
-
+# Project root is one level up from this file (integration/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from typing import Dict, Any, Optional
 from statistics import mean
@@ -56,11 +57,8 @@ def _compute_cognitive_load(
 ) -> float:
     """
     Weighted cognitive load score:
-        High if:
-            - mastery low
-            - exam weight high
+        High if mastery low and exam weight high
     """
-
     loads = []
 
     for concept_id, cm in state.concepts.items():
@@ -96,14 +94,10 @@ def suggest_pomodoro(
             strategy: str
         }
     """
-
     volatility = _compute_mastery_volatility(mastery_state)
     cognitive_load = _compute_cognitive_load(mastery_state, exam_weights)
 
-    # -------------------------------------------------------------------
     # Attention-based base template
-    # -------------------------------------------------------------------
-
     if attention >= 0.75:
         base = {"work": 50, "break": 10, "type": "Deep Focus"}
     elif attention >= 0.5:
@@ -113,24 +107,16 @@ def suggest_pomodoro(
     else:
         base = {"work": 10, "break": 5, "type": "Recovery Mode"}
 
-    # -------------------------------------------------------------------
     # Cognitive Load Adjustments
-    # -------------------------------------------------------------------
-
-    # If high cognitive load, shorten work blocks slightly
     if cognitive_load > 0.6:
         base["work"] = max(10, base["work"] - 5)
         base["type"] += " (High Cognitive Load)"
 
-    # If mastery stable and attention high → allow longer focus
     if volatility < 0.15 and attention > 0.75:
         base["work"] = min(60, base["work"] + 10)
         base["type"] = "Extended Deep Focus"
 
-    # -------------------------------------------------------------------
     # Strategy Layer (VARK-informed)
-    # -------------------------------------------------------------------
-
     strategy = "Standard focused study blocks."
 
     if vark_type == "R":
@@ -139,13 +125,8 @@ def suggest_pomodoro(
             "During breaks, summarise concepts in your own words."
         )
 
-    # If attention low → encourage micro-goals
     if attention < 0.5:
         strategy += " Set one micro-goal per session."
-
-    # -------------------------------------------------------------------
-    # Final Structure
-    # -------------------------------------------------------------------
 
     return {
         "pomodoro_type": base["type"],

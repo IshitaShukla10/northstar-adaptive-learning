@@ -1,6 +1,6 @@
 """
 End-to-end demo of the Scheduler Module (Person 3 — Chavi).
-Run: python demo_scheduler.py
+Run from the project root: python scripts/demo_scheduler.py
 
 Builds on top of the Learning State Engine (Person 1 — Yajie) to produce:
   1. A 14-day adaptive study plan
@@ -14,7 +14,10 @@ import os
 import sys
 from datetime import date, datetime, timedelta
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+# Add project root and src/ to path
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from learning_model import MasteryEngine
 from scheduler import (
@@ -22,7 +25,7 @@ from scheduler import (
     CognitiveLoadTracker,
     TimetableEngine,
 )
-from bridge import (
+from integration.bridge import (
     SessionEvent,
     build_knowledge_graph,
     load_exam_weights,
@@ -69,10 +72,8 @@ timetable = TimetableEngine(
 )
 
 exam_weights = load_exam_weights()
-
 exam_date = date.today() + timedelta(days=14)
 
-# Student is available Mon–Fri 3 h, weekends 4 h
 availability = [
     AvailabilityWindow(day_of_week=0, available_hours=3.0),  # Mon
     AvailabilityWindow(day_of_week=1, available_hours=3.0),  # Tue
@@ -111,18 +112,8 @@ for sched in plan.days:
 today_schedule = timetable.get_todays_schedule(STUDENT, plan)
 
 print(f"\n=== Today's Pomodoro Schedule  ({today_schedule.date}) ===")
-BLOCK_ICONS = {
-    "work":        "🔵",
-    "review":      "🟡",
-    "short_break": "🟢",
-    "long_break":  "🔴",
-}
-BLOCK_LABELS = {
-    "work":        "WORK",
-    "review":      "REVIEW",
-    "short_break": "SHORT BREAK",
-    "long_break":  "LONG BREAK",
-}
+BLOCK_ICONS = {"work": "🔵", "review": "🟡", "short_break": "🟢", "long_break": "🔴"}
+BLOCK_LABELS = {"work": "WORK", "review": "REVIEW", "short_break": "SHORT BREAK", "long_break": "LONG BREAK"}
 
 clock = datetime.combine(today_schedule.date, datetime.min.time()).replace(hour=9)
 for block in today_schedule.blocks:
@@ -131,9 +122,7 @@ for block in today_schedule.blocks:
     end_str = end_clock.strftime("%H:%M")
     icon = BLOCK_ICONS.get(block.block_type, "⬜")
     label = BLOCK_LABELS.get(block.block_type, block.block_type.upper())
-    concepts_str = (
-        ", ".join(block.concept_ids) if block.concept_ids else "—"
-    )
+    concepts_str = ", ".join(block.concept_ids) if block.concept_ids else "—"
     if block.block_type in ("work", "review"):
         print(
             f"  {icon} {start_str}–{end_str}  [{label:11s}] "
@@ -151,44 +140,32 @@ print(f"\n=== Cognitive Load Simulation ===")
 
 tracker = CognitiveLoadTracker(student_id=STUDENT)
 
-# Simulate a session: first half decent, second half fatigued
 base_time = datetime.now()
 session_events = [
-    # First half — reasonable performance
-    SessionEvent(STUDENT, "buffer_overflow",          SUBJECT, correct=True,  response_time_seconds=28.0,
-                 timestamp=base_time + timedelta(minutes=0)),
-    SessionEvent(STUDENT, "buffer_overflow",          SUBJECT, correct=True,  response_time_seconds=32.0,
-                 timestamp=base_time + timedelta(minutes=3)),
-    SessionEvent(STUDENT, "stack_frame",              SUBJECT, correct=True,  response_time_seconds=25.0,
-                 timestamp=base_time + timedelta(minutes=6)),
-    SessionEvent(STUDENT, "stack_frame",              SUBJECT, correct=False, response_time_seconds=40.0,
-                 timestamp=base_time + timedelta(minutes=9)),
-    # Second half — accuracy drops, response time climbs (fatigue)
-    SessionEvent(STUDENT, "reference_monitor",        SUBJECT, correct=False, response_time_seconds=65.0,
-                 timestamp=base_time + timedelta(minutes=30)),
-    SessionEvent(STUDENT, "reference_monitor",        SUBJECT, correct=False, response_time_seconds=72.0,
-                 timestamp=base_time + timedelta(minutes=33)),
-    SessionEvent(STUDENT, "format_string_vulnerability", SUBJECT, correct=False, response_time_seconds=80.0,
-                 timestamp=base_time + timedelta(minutes=36)),
-    SessionEvent(STUDENT, "format_string_vulnerability", SUBJECT, correct=False, response_time_seconds=88.0,
-                 timestamp=base_time + timedelta(minutes=39)),
+    SessionEvent(STUDENT, "buffer_overflow",          SUBJECT, correct=True,  response_time_seconds=28.0, timestamp=base_time + timedelta(minutes=0)),
+    SessionEvent(STUDENT, "buffer_overflow",          SUBJECT, correct=True,  response_time_seconds=32.0, timestamp=base_time + timedelta(minutes=3)),
+    SessionEvent(STUDENT, "stack_frame",              SUBJECT, correct=True,  response_time_seconds=25.0, timestamp=base_time + timedelta(minutes=6)),
+    SessionEvent(STUDENT, "stack_frame",              SUBJECT, correct=False, response_time_seconds=40.0, timestamp=base_time + timedelta(minutes=9)),
+    SessionEvent(STUDENT, "reference_monitor",        SUBJECT, correct=False, response_time_seconds=65.0, timestamp=base_time + timedelta(minutes=30)),
+    SessionEvent(STUDENT, "reference_monitor",        SUBJECT, correct=False, response_time_seconds=72.0, timestamp=base_time + timedelta(minutes=33)),
+    SessionEvent(STUDENT, "format_string_vulnerability", SUBJECT, correct=False, response_time_seconds=80.0, timestamp=base_time + timedelta(minutes=36)),
+    SessionEvent(STUDENT, "format_string_vulnerability", SUBJECT, correct=False, response_time_seconds=88.0, timestamp=base_time + timedelta(minutes=39)),
 ]
 
 for ev in session_events:
     tracker.add_event(ev)
 
 stats = tracker.get_stats()
-print(f"  Events recorded    : {tracker.event_count}")
-print(f"  Session duration   : {(stats.session_end - stats.session_start).seconds // 60} min")
+print(f"  Events recorded      : {tracker.event_count}")
+print(f"  Session duration     : {(stats.session_end - stats.session_start).seconds // 60} min")
 print(f"  Cognitive efficiency : {stats.cognitive_efficiency:.3f}  (1.0 = ideal at 30 s avg)")
-print(f"  Accuracy drift     : {stats.accuracy_drift:+.3f}  (negative = declining)")
-print(f"  Time drift         : {stats.time_drift:+.1f} s  (positive = slowing)")
-print(f"  Burnout detected   : {stats.burnout_detected}")
-print(f"  Optimal remaining  : {stats.optimal_remaining_minutes} min")
+print(f"  Accuracy drift       : {stats.accuracy_drift:+.3f}  (negative = declining)")
+print(f"  Time drift           : {stats.time_drift:+.1f} s  (positive = slowing)")
+print(f"  Burnout detected     : {stats.burnout_detected}")
+print(f"  Optimal remaining    : {stats.optimal_remaining_minutes} min")
 
 if tracker.should_take_break():
-    break_len = tracker.recommended_break_duration()
-    print(f"\n  ⚠️  RECOMMENDATION: Take a {break_len}-minute break now!")
+    print(f"\n  ⚠️  RECOMMENDATION: Take a {tracker.recommended_break_duration()}-minute break now!")
 else:
     print(f"\n  ✅ Keep going — no burnout detected.")
 
@@ -199,8 +176,6 @@ print(f"\n=== Lock-In Enforcement ===")
 
 work_blocks = [b for b in today_schedule.blocks if b.block_type in ("work", "review")]
 
-# Simulate: first 2 blocks complete, then most skipped to trigger warning
-# (attempted 80%+ of the day but completed < 50% → lock-in alert)
 for i, block in enumerate(work_blocks):
     if i < 2:
         timetable.mark_block_complete(block)
@@ -224,9 +199,6 @@ print(f"  If recommended plan followed : {scores['recommended_plan']}%")
 gain = scores["recommended_plan"] - scores["current_pace"]
 print(f"  Potential gain from plan     : +{gain:.1f}%")
 
-# ──────────────────────────────────────────────────────────────────────
-# 8. AI schedule insight (optional)
-# ──────────────────────────────────────────────────────────────────────
 if os.getenv("OPENAI_API_KEY"):
     print(f"\n=== AI Schedule Insight ===")
     insight = timetable.get_schedule_insight(STUDENT, plan)

@@ -58,7 +58,7 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
 @router.post("/weekly-report")
 async def weekly_report(payload: dict = Body(...)):
     try:
-        from insights import generate_weekly_report
+        from integration.insights import generate_weekly_report
         concepts_raw = payload.get("concepts", [])
         current_weekly_minutes = int(payload.get("current_weekly_minutes", 240))
         cfg = payload.get("config", None)
@@ -81,7 +81,7 @@ _curriculum_meta = None
 def _get_curriculum_meta():
     global _curriculum_meta
     if _curriculum_meta is None:
-        from bridge import load_curriculum_meta
+        from integration.bridge import load_curriculum_meta
         _curriculum_meta = load_curriculum_meta()
     return _curriculum_meta
 
@@ -89,13 +89,13 @@ def _get_curriculum_meta():
 @router.post("/integrated-weekly")
 async def integrated_weekly(payload: dict = Body(...)):
     try:
-        from engine_state import get_shared_engine
-        from bridge import mastery_to_concepts_payload, grade_to_quiz_responses
-        from insights import generate_weekly_report
+        from integration.engine_state import get_shared_engine
+        from integration.bridge import mastery_to_concepts_payload, grade_to_quiz_responses
+        from integration.insights import generate_weekly_report
         from scheduler import TimetableEngine, AvailabilityWindow
         from learning_model import QuizResponse
 
-        from bridge import load_exam_weights, load_topic_mastery
+        from integration.bridge import load_exam_weights, load_topic_mastery
 
         student_id = payload.get("student_id", "stu_001")
         subject = payload.get("subject", "computer_security")
@@ -228,7 +228,7 @@ async def integrated_weekly(payload: dict = Body(...)):
 
 @router.post("/generate-kinesthetic")
 async def generate_kinesthetic(file: UploadFile = File(...)):
-    from kinesthetics import generate_kinesthetic_plan
+    from integration.kinesthetics import generate_kinesthetic_plan
     client = _get_openai_client()
     pdf_bytes = await file.read()
     pdf_text = _extract_pdf_text(pdf_bytes)
@@ -241,7 +241,7 @@ async def generate_kinesthetic(file: UploadFile = File(...)):
 
 @router.post("/grade-kinesthetic")
 async def grade_kinesthetic(payload: dict = Body(...)):
-    from kinesthetics import compute_topic_mastery
+    from integration.kinesthetics import compute_topic_mastery
     plan = payload.get("plan", {})
     completed_activity_ids = payload.get("completed_activity_ids", [])
     quiz_answers = payload.get("quiz_answers", {})
@@ -268,7 +268,7 @@ async def grade_kinesthetic(payload: dict = Body(...)):
 
 @router.post("/generate-lecture")
 async def generate_lecture(file: UploadFile = File(...)):
-    from lecture import generate_lecture_script, text_to_speech_mp3
+    from integration.lecture import generate_lecture_script, text_to_speech_mp3
     client = _get_openai_client()
     pdf_bytes = await file.read()
     pdf_text = _extract_pdf_text(pdf_bytes)

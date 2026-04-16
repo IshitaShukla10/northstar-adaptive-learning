@@ -84,8 +84,8 @@ async def get_all_weaknesses(student_id: str):
     Returns a list of subjects with their flagged/weak concepts, each annotated
     with difficulty, mastery, and estimated study time.
     """
-    from engine_state import get_shared_engine
-    from bridge import load_exam_weights, load_curriculum_meta, mastery_to_concepts_payload
+    from integration.engine_state import get_shared_engine
+    from integration.bridge import load_exam_weights, load_curriculum_meta, mastery_to_concepts_payload
 
     try:
         engine, _ = get_shared_engine()
@@ -147,8 +147,8 @@ async def get_all_weaknesses(student_id: str):
 
 @router.get("/{student_id}/{subject}")
 async def get_course_analytics(student_id: str, subject: str):
-    from engine_state import get_shared_engine
-    from bridge import mastery_to_concepts_payload, load_exam_weights, load_curriculum_meta
+    from integration.engine_state import get_shared_engine
+    from integration.bridge import mastery_to_concepts_payload, load_exam_weights, load_curriculum_meta
 
     try:
         engine, _ = get_shared_engine()

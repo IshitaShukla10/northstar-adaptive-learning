@@ -88,11 +88,18 @@ NorthStar
 │
 ├── ntulearn_clone/             ← Standalone NTU Learn mock (no Node needed)
 │
-├── bridge.py                   ← MasteryEngine ↔ analytics ↔ timetable transforms
-├── engine_state.py             ← Singleton engine instance for HTTP requests
-├── insights.py                 ← Weekly analytics report generator
-├── kinesthetics.py             ← Kinesthetic activity planner
-├── lecture.py                  ← PDF → lecture script → TTS audio
+├── integration/                ← Shared modules wiring the AI core to the API
+│   ├── bridge.py                  MasteryEngine ↔ analytics ↔ timetable transforms; CSV loaders
+│   ├── engine_state.py            Process-level MasteryEngine + KnowledgeGraph singleton
+│   ├── insights.py                Weekly analytics report generator (Sia/P4)
+│   ├── kinesthetics.py            Kinesthetic quiz generation and mastery scoring
+│   ├── lecture.py                 PDF text → lecture script → TTS audio
+│   └── adaptive_pomodoro.py       Pomodoro work/break recommendation engine
+│
+├── scripts/                    ← Standalone demo scripts (run from project root)
+│   ├── demo_learning_model.py     BKT mastery engine end-to-end demo
+│   ├── demo_scheduler.py          Timetable engine with cognitive load demo
+│   └── demo_integration.py        Full loop: quiz → mastery → analytics → schedule
 │
 ├── bridge_data/                ← CSV seed data (curriculum, mastery, quiz results)
 ├── sample_data/                ← Sample PDFs for demo
@@ -267,13 +274,13 @@ These scripts exercise the core algorithms end-to-end without the web server:
 source .venv/bin/activate
 
 # 1. BKT mastery engine demo — simulates quiz sessions + priority ranking
-python demo_learning_model.py
+python scripts/demo_learning_model.py
 
 # 2. Scheduler demo — mastery state → 14-day Pomodoro timetable
-python demo_scheduler.py
+python scripts/demo_scheduler.py
 
 # 3. Full integration demo — quiz → mastery → analytics → schedule
-python demo_integration.py
+python scripts/demo_integration.py
 ```
 
 ---
@@ -380,7 +387,7 @@ Drop the PDF into `sample_data/` and restart the backend. The seed pipeline will
 | Yajie | `src/learning_model/` | BKT engine, knowledge graph, forgetting curves, MasteryEngine API |
 | Ishita | `ntulearn_clone/`, platform wiring | LMS UI, NorthStar dashboard, data pipeline integration |
 | Chavi | `src/scheduler/` | Timetable + cognitive-load engine |
-| Sia | `insights.py` | Weekly analytics report, predicted score simulation |
+| Sia | `integration/insights.py` | Weekly analytics report, predicted score simulation |
 | P2 | VARK / Content | Visual notebooks, chatbot, kinesthetic activities |
 
 ---

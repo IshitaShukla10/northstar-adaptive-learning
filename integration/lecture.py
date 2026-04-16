@@ -53,13 +53,11 @@ def generate_lecture_script(client: OpenAI, pdf_text: str) -> str:
 def text_to_speech_mp3(client: OpenAI, script: str, voice: str = VOICE) -> bytes:
     """
     Converts script to MP3 audio bytes.
-    Note: We concatenate MP3 bytes (no pydub/ffmpeg).
     """
     chunks = chunk_text(script, max_chars=3500)
     final_audio = b""
 
     for chunk in chunks:
-        # IMPORTANT: Some SDK versions don't accept "format"
         audio_resp = client.audio.speech.create(
             model=TTS_MODEL,
             voice=voice,
