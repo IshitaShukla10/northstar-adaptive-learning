@@ -8,12 +8,10 @@ Shows the complete study loop:
   3. MasteryEngine outputs mastery state                          (P1)
   4. Bridge converts mastery → Sia's Concept payload              (bridge)
   5. generate_weekly_report() produces analytics + score forecast (P4)
-  6. TimetableEngine generates a 7-day Pomodoro schedule          (P3)
 """
 
 import os
 import sys
-from datetime import date, datetime, timedelta
 
 # Add project root and src/ to path
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +19,6 @@ sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.join(ROOT_DIR, "src"))
 
 from learning_model import MasteryEngine
-from scheduler import AvailabilityWindow, TimetableEngine
 from integration.bridge import (
     build_knowledge_graph,
     grade_to_quiz_responses,
@@ -118,73 +115,9 @@ for rec in weekly_report["prescriptive_analysis"]["recommendations"][:4]:
     print(f"             {rec['rationale']}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Scheduler: generate 7-day Pomodoro study plan
+# 5. Simulate next quiz cycle (loop closes)
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n── Step 5: Generating 7-day study plan (Chavi's scheduler) ──")
-
-timetable = TimetableEngine(
-    mastery_engine=engine,
-    knowledge_graph=kg,
-    openai_api_key=os.getenv("OPENAI_API_KEY"),
-)
-
-availability = [
-    AvailabilityWindow(day_of_week=0, available_hours=3.0),
-    AvailabilityWindow(day_of_week=1, available_hours=3.0),
-    AvailabilityWindow(day_of_week=2, available_hours=3.0),
-    AvailabilityWindow(day_of_week=3, available_hours=3.0),
-    AvailabilityWindow(day_of_week=4, available_hours=2.5),
-    AvailabilityWindow(day_of_week=5, available_hours=4.0),
-    AvailabilityWindow(day_of_week=6, available_hours=4.0),
-]
-
-exam_date = date.today() + timedelta(days=14)
-
-plan = timetable.generate_plan(
-    student_id=STUDENT,
-    subjects=[SUBJECT],
-    exam_weights_by_subject={SUBJECT: exam_weights},
-    exam_date=exam_date,
-    availability=availability,
-)
-
-print(f"\n  7-day plan  (exam: {exam_date})")
-for sched in plan.days[:7]:
-    work_blocks = [b for b in sched.blocks if b.block_type in ("work", "review")]
-    concepts = ", ".join(cid for b in work_blocks for cid in b.concept_ids)
-    print(
-        f"  {sched.date}  ({sched.date.strftime('%a')})  "
-        f"{sched.total_study_minutes:3d} min  |  {len(work_blocks)} work blocks"
-    )
-    if concepts:
-        print(f"    Focus: {concepts}")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 6. Today's detailed Pomodoro schedule
-# ─────────────────────────────────────────────────────────────────────────────
-today_schedule = timetable.get_todays_schedule(STUDENT, plan)
-print(f"\n── Step 6: Today's Pomodoro schedule ({today_schedule.date}) ──")
-
-ICONS  = {"work": "🔵", "review": "🟡", "short_break": "🟢", "long_break": "🔴"}
-LABELS = {"work": "WORK", "review": "REVIEW", "short_break": "SHORT BREAK", "long_break": "LONG BREAK"}
-
-clock = datetime.combine(today_schedule.date, datetime.min.time()).replace(hour=9)
-for block in today_schedule.blocks:
-    start = clock.strftime("%H:%M")
-    end   = (clock + timedelta(minutes=block.duration_minutes)).strftime("%H:%M")
-    icon  = ICONS.get(block.block_type, "⬜")
-    label = LABELS.get(block.block_type, block.block_type.upper())
-    if block.block_type in ("work", "review"):
-        concepts = ", ".join(block.concept_ids) if block.concept_ids else "—"
-        print(f"  {icon} {start}–{end}  [{label:11s}] {concepts}")
-    else:
-        print(f"  {icon} {start}–{end}  [{label}]")
-    clock += timedelta(minutes=block.duration_minutes)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. Simulate next quiz cycle (loop closes)
-# ─────────────────────────────────────────────────────────────────────────────
-print("\n── Step 7: After one study session — next quiz cycle ──")
+print("\n── Step 5: After one study session — next quiz cycle ──")
 print("  (simulating improved scores after studying buffer_overflow & reference_monitor)")
 
 next_quiz_results = {

@@ -19,7 +19,6 @@ Workflow A — individual learner (commercial / institutional)
     POST /api/v1/mastery/update          ingest quiz/session data → update BKT
     GET  /api/v1/mastery/{sid}/{subj}    current mastery snapshot
     GET  /api/v1/mastery/{sid}/{subj}/priorities   ranked study priority list
-    POST /api/v1/schedule/generate       generate personalised Pomodoro plan
     GET  /api/v1/insights/{sid}/{subj}   AI prescriptive text insight
 
 Workflow B — curriculum researcher / institution (societal)
@@ -30,7 +29,6 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, HTTPException
@@ -55,14 +53,6 @@ class MasteryUpdateRequest(BaseModel):
     student_id: str
     subject: str
     attempts: List[QuizAttempt]
-
-
-class ScheduleRequest(BaseModel):
-    student_id: str
-    subject: str
-    days_until_exam: int = Field(default=14, ge=1, le=365)
-    weekly_study_hours: float = Field(default=4.0, ge=0.5, le=16.0)
-    availability: Optional[List[Dict[str, Any]]] = None
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -168,8 +158,7 @@ async def get_priorities(
     Return concepts ranked by study urgency:
         PriorityScore = ExamWeightage × (1 − Mastery) × ForgettingRisk
 
-    Higher score → study this first.  Used by the scheduler and timetable
-    engine to allocate Pomodoro blocks.
+    Higher score → study this first.
     """
     engine, _ = _get_engine()
     exam_weights = _load_weights()
@@ -194,90 +183,6 @@ async def get_priorities(
             }
             for i, p in enumerate(priorities)
         ],
-    }
-
-
-@router.post("/schedule/generate")
-async def generate_schedule(body: ScheduleRequest) -> Dict[str, Any]:
-    """
-    Generate a personalised Pomodoro-based weekly study plan for a student.
-
-    The plan:
-      - Allocates study blocks proportional to concept priority scores
-      - Respects availability windows (defaults to 4h/day if not provided)
-      - Detects cognitive load / burnout risk and inserts breaks
-      - Returns a day-by-day schedule up to the exam date
-    """
-    engine, kg = _get_engine()
-    exam_weights = _load_weights()
-
-    api_key = os.getenv("OPENAI_API_KEY")
-
-    try:
-        from scheduler import TimetableEngine, AvailabilityWindow
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Scheduler not available: {exc}")
-
-    if body.availability:
-        availability = [
-            AvailabilityWindow(
-                day_of_week=int(a["day_of_week"]),
-                available_hours=float(a["available_hours"]),
-            )
-            for a in body.availability
-        ]
-    else:
-        daily_hours = min(body.weekly_study_hours / 5, 4.0)
-        weekend_hours = min(body.weekly_study_hours / 2, 5.0)
-        availability = [
-            AvailabilityWindow(day_of_week=d, available_hours=daily_hours)
-            for d in range(5)
-        ] + [
-            AvailabilityWindow(day_of_week=d, available_hours=weekend_hours)
-            for d in range(5, 7)
-        ]
-
-    timetable = TimetableEngine(
-        mastery_engine=engine,
-        knowledge_graph=kg,
-        openai_api_key=api_key,
-    )
-
-    exam_date = date.today() + timedelta(days=body.days_until_exam)
-    plan = timetable.generate_plan(
-        student_id=body.student_id,
-        subjects=[body.subject],
-        exam_weights_by_subject={body.subject: exam_weights},
-        exam_date=exam_date,
-        availability=availability,
-    )
-
-    todays_sched = timetable.get_todays_schedule(body.student_id, plan)
-
-    def _block(b) -> dict:
-        return {
-            "block_type": b.block_type,
-            "duration_minutes": b.duration_minutes,
-            "concept_ids": list(b.concept_ids),
-            "priority_score": round(float(b.priority_score), 4),
-            "difficulty": round(float(b.difficulty), 3),
-        }
-
-    def _day(d) -> dict:
-        return {
-            "date": str(d.date),
-            "day_of_week": d.date.strftime("%A"),
-            "total_study_minutes": d.total_study_minutes,
-            "blocks": [_block(b) for b in d.blocks],
-        }
-
-    return {
-        "student_id": body.student_id,
-        "subject": body.subject,
-        "exam_date": str(exam_date),
-        "days_until_exam": body.days_until_exam,
-        "schedule": [_day(d) for d in plan.days],
-        "todays_schedule": _day(todays_sched) if todays_sched else None,
     }
 
 
@@ -336,8 +241,7 @@ async def service_info() -> Dict[str, Any]:
         "dual_utility_design": {
             "workflow_a_commercial": (
                 "Individual students and institutions receive personalised mastery "
-                "tracking, priority rankings, Pomodoro study schedules, and AI "
-                "prescriptive coaching — all via REST API."
+                "tracking, priority rankings, and AI prescriptive coaching — all via REST API."
             ),
             "workflow_b_research": (
                 "Every student interaction contributes anonymised data to a "
@@ -358,7 +262,6 @@ async def service_info() -> Dict[str, Any]:
             "mastery_update": "POST /api/v1/mastery/update",
             "mastery_snapshot": "GET  /api/v1/mastery/{student_id}/{subject}",
             "priority_ranking": "GET  /api/v1/mastery/{student_id}/{subject}/priorities",
-            "schedule_generate": "POST /api/v1/schedule/generate",
             "ai_insight": "GET  /api/v1/insights/{student_id}/{subject}",
             "population_insights": "GET  /research/population-insights",
             "curriculum_health": "GET  /research/curriculum-health",

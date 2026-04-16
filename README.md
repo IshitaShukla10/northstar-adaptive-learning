@@ -61,10 +61,6 @@ NorthStar
 │   ├── forgetting.py              Ebbinghaus decay model
 │   └── mastery_engine.py          Main API — combines all of the above
 │
-├── src/scheduler/              ← Timetable engine
-│   ├── timetable.py               14-day adaptive Pomodoro plan generator
-│   └── cognitive_load.py          Burnout detection from session events
-│
 ├── backend/                    ← FastAPI server (port 8000)
 │   ├── routers/
 │   │   ├── public_api.py          /api/v1/*  — versioned public LMS API
@@ -89,17 +85,15 @@ NorthStar
 ├── ntulearn_clone/             ← Standalone NTU Learn mock (no Node needed)
 │
 ├── integration/                ← Shared modules wiring the AI core to the API
-│   ├── bridge.py                  MasteryEngine ↔ analytics ↔ timetable transforms; CSV loaders
+│   ├── bridge.py                  MasteryEngine ↔ analytics data transforms; CSV loaders
 │   ├── engine_state.py            Process-level MasteryEngine + KnowledgeGraph singleton
 │   ├── insights.py                Weekly analytics report generator (Sia/P4)
 │   ├── kinesthetics.py            Kinesthetic quiz generation and mastery scoring
-│   ├── lecture.py                 PDF text → lecture script → TTS audio
-│   └── adaptive_pomodoro.py       Pomodoro work/break recommendation engine
+│   └── lecture.py                 PDF text → lecture script → TTS audio
 │
 ├── scripts/                    ← Standalone demo scripts (run from project root)
 │   ├── demo_learning_model.py     BKT mastery engine end-to-end demo
-│   ├── demo_scheduler.py          Timetable engine with cognitive load demo
-│   └── demo_integration.py        Full loop: quiz → mastery → analytics → schedule
+│   └── demo_integration.py        Full loop: quiz → mastery → analytics
 │
 ├── bridge_data/                ← CSV seed data (curriculum, mastery, quiz results)
 ├── sample_data/                ← Sample PDFs for demo
@@ -118,7 +112,6 @@ Every student interaction generates value twice:
 │                                                          │
 │  POST /api/v1/mastery/update      ← quiz results        │
 │  GET  /api/v1/mastery/{id}/priorities ← ranked plan     │
-│  POST /api/v1/schedule/generate   ← Pomodoro timetable  │
 │  GET  /api/v1/insights/{id}       ← AI coaching text    │
 └───────────────────┬──────────────────────────────────────┘
                     │  same data, anonymised
@@ -226,12 +219,6 @@ Base URL: `http://localhost:8000`
 | GET | `/api/v1/mastery/{student_id}/{subject}` | Current mastery snapshot (forgetting applied) |
 | GET | `/api/v1/mastery/{student_id}/{subject}/priorities` | Concepts ranked by study urgency |
 
-#### Scheduling
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/schedule/generate` | Generate personalised Pomodoro weekly plan |
-
 #### AI Coaching
 
 | Method | Endpoint | Description |
@@ -276,10 +263,7 @@ source .venv/bin/activate
 # 1. BKT mastery engine demo — simulates quiz sessions + priority ranking
 python scripts/demo_learning_model.py
 
-# 2. Scheduler demo — mastery state → 14-day Pomodoro timetable
-python scripts/demo_scheduler.py
-
-# 3. Full integration demo — quiz → mastery → analytics → schedule
+# 2. Full integration demo — quiz → mastery → analytics
 python scripts/demo_integration.py
 ```
 
@@ -317,17 +301,12 @@ To wire NorthStar into a real Blackboard (or any LMS):
    GET /api/v1/mastery/s1234/computer_security/priorities?days_until_exam=14
    ```
 
-3. **To generate a study schedule** — POST to schedule:
-   ```
-   POST /api/v1/schedule/generate
-   ```
-
-4. **For AI coaching text** — GET insights:
+3. **For AI coaching text** — GET insights:
    ```
    GET /api/v1/insights/s1234/computer_security
    ```
 
-5. **For curriculum research** — GET population data (no student ID needed):
+4. **For curriculum research** — GET population data (no student ID needed):
    ```
    GET /research/population-insights?subject=computer_security
    ```
@@ -386,7 +365,7 @@ Drop the PDF into `sample_data/` and restart the backend. The seed pipeline will
 |--------|--------|----------------|
 | Yajie | `src/learning_model/` | BKT engine, knowledge graph, forgetting curves, MasteryEngine API |
 | Ishita | `ntulearn_clone/`, platform wiring | LMS UI, NorthStar dashboard, data pipeline integration |
-| Chavi | `src/scheduler/` | Timetable + cognitive-load engine |
+| Chavi | — | Timetable + cognitive-load engine |
 | Sia | `integration/insights.py` | Weekly analytics report, predicted score simulation |
 | P2 | VARK / Content | Visual notebooks, chatbot, kinesthetic activities |
 

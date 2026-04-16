@@ -1,8 +1,5 @@
 """
-Integration router: AI analytics + timetable endpoints.
-
-Moves the heavy ML endpoints out of root main.py into the FastAPI backend so
-the Next.js frontend only needs to talk to one server (port 8000).
+Integration router: AI analytics endpoints.
 
 Endpoints:
   POST /weekly-report
@@ -15,14 +12,12 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import date, timedelta
 from io import BytesIO
 from typing import Optional
 
 from fastapi import APIRouter, Body, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 
-# Ensure src/ is on the path for learning_model / scheduler imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 router = APIRouter(tags=["integration"])
@@ -72,7 +67,7 @@ async def weekly_report(payload: dict = Body(...)):
 
 
 # ---------------------------------------------------------------------------
-# /integrated-weekly  — full loop: quiz results → mastery → report + timetable
+# /integrated-weekly  — full loop: quiz results → mastery → weekly report
 # ---------------------------------------------------------------------------
 
 _curriculum_meta = None
@@ -92,7 +87,6 @@ async def integrated_weekly(payload: dict = Body(...)):
         from integration.engine_state import get_shared_engine
         from integration.bridge import mastery_to_concepts_payload, grade_to_quiz_responses
         from integration.insights import generate_weekly_report
-        from scheduler import TimetableEngine, AvailabilityWindow
         from learning_model import QuizResponse
 
         from integration.bridge import load_exam_weights, load_topic_mastery
@@ -100,7 +94,6 @@ async def integrated_weekly(payload: dict = Body(...)):
         student_id = payload.get("student_id", "stu_001")
         subject = payload.get("subject", "computer_security")
         exam_weights: dict = payload.get("exam_weights") or load_exam_weights()
-        days_until_exam = int(payload.get("days_until_exam", 14))
         current_weekly_minutes = int(payload.get("current_weekly_minutes", 240))
         topic_mastery: dict = payload.get("topic_mastery", {})
         raw_quiz_responses: list = payload.get("quiz_responses", [])
@@ -125,7 +118,6 @@ async def integrated_weekly(payload: dict = Body(...)):
             responses = grade_to_quiz_responses(topic_mastery, student_id, subject)
             engine.update_from_quiz(responses)
         else:
-            # Fall back to CSV mastery data for this student
             csv_mastery = load_topic_mastery(student_id=student_id, subject=subject)
             if csv_mastery:
                 responses = grade_to_quiz_responses(csv_mastery, student_id, subject)
@@ -142,67 +134,6 @@ async def integrated_weekly(payload: dict = Body(...)):
             current_weekly_minutes=current_weekly_minutes,
         )
 
-        # 4. Build timetable
-        availability_raw = payload.get("availability", [])
-        if availability_raw:
-            availability = [
-                AvailabilityWindow(
-                    day_of_week=int(a["day_of_week"]),
-                    available_hours=float(a["available_hours"]),
-                )
-                for a in availability_raw
-            ]
-        else:
-            availability = [
-                AvailabilityWindow(day_of_week=0, available_hours=3.0),
-                AvailabilityWindow(day_of_week=1, available_hours=3.0),
-                AvailabilityWindow(day_of_week=2, available_hours=3.0),
-                AvailabilityWindow(day_of_week=3, available_hours=3.0),
-                AvailabilityWindow(day_of_week=4, available_hours=2.5),
-                AvailabilityWindow(day_of_week=5, available_hours=4.0),
-                AvailabilityWindow(day_of_week=6, available_hours=4.0),
-            ]
-
-        timetable = TimetableEngine(
-            mastery_engine=engine,
-            knowledge_graph=kg,
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-        )
-        exam_date = date.today() + timedelta(days=days_until_exam)
-        plan = timetable.generate_plan(
-            student_id=student_id,
-            subjects=[subject],
-            exam_weights_by_subject={subject: exam_weights},
-            exam_date=exam_date,
-            availability=availability,
-        )
-        todays_sched = timetable.get_todays_schedule(student_id, plan)
-
-        def serialise_block(b) -> dict:
-            return {
-                "block_type": b.block_type,
-                "duration_minutes": b.duration_minutes,
-                "concept_ids": list(b.concept_ids),
-                "priority_score": round(float(b.priority_score), 4),
-                "difficulty": round(float(b.difficulty), 3),
-            }
-
-        def serialise_day(d) -> dict:
-            return {
-                "date": str(d.date),
-                "day_of_week": d.date.strftime("%A"),
-                "total_study_minutes": d.total_study_minutes,
-                "blocks": [serialise_block(b) for b in d.blocks],
-            }
-
-        study_plan_out = {
-            "exam_date": str(exam_date),
-            "days_until_exam": days_until_exam,
-            "total_days": len(plan.days),
-            "days": [serialise_day(d) for d in plan.days],
-        }
-
-        # Annotate concepts_payload with estimated study time for the frontend
         _STUDY_TIME = {"easy": 20, "medium": 35, "hard": 50}
         for c in concepts_payload:
             c["study_time_minutes"] = _STUDY_TIME.get(c.get("difficulty", "medium"), 35)
@@ -211,8 +142,6 @@ async def integrated_weekly(payload: dict = Body(...)):
             "student_id": student_id,
             "subject": subject,
             "weekly_report": report,
-            "study_plan": study_plan_out,
-            "todays_schedule": serialise_day(todays_sched) if todays_sched else None,
             "concepts_payload": concepts_payload,
         }
 
