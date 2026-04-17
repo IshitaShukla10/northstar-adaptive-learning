@@ -24,20 +24,24 @@ from backend.scraper import scrape_article
 logger = logging.getLogger(__name__)
 
 SAMPLE_DIR = Path(__file__).parent.parent / "sample_data"
-COURSE_TITLE = "Climate & Earth Systems"   # default course name for demo
+
+# Primary course for SC3010 Computer Security
+SC3010_TITLE = "Computer Security"
+SC3010_DESC  = "AI-generated visual notes from SC3010 Computer Security lecture slides and tutorials."
+
+# PDFs that belong to SC3010 — computer-security.pdf is the primary source
+SC3010_SLIDE_PDFS  = {"computer-security.pdf"}
+SC3010_TUTORIAL_PDFS = {"tutorial 3.pdf"}
 
 
 async def _get_or_create_course(db) -> int:
     result = await db.execute(select(Course).limit(1))
     course = result.scalars().first()
     if not course:
-        course = Course(
-            title=COURSE_TITLE,
-            description="AI-generated visual notes from lecture slides, articles, and tutorials.",
-        )
+        course = Course(title=SC3010_TITLE, description=SC3010_DESC)
         db.add(course)
         await db.flush()
-        logger.info(f"Created course id={course.id}: {COURSE_TITLE}")
+        logger.info(f"Created course id={course.id}: {SC3010_TITLE}")
     return course.id
 
 
@@ -206,26 +210,19 @@ async def run_seed() -> None:
         course_id = await _get_or_create_course(db)
         section_order = 0
 
-        # Slide PDFs
-        for pdf in sorted(SAMPLE_DIR.glob("*.pdf")):
-            if "tutorial" in pdf.name.lower():
-                continue
+        # SC3010 slide PDFs — computer-security.pdf first, then any other SC3010 slides
+        sc3010_slides = [p for p in sorted(SAMPLE_DIR.glob("*.pdf"))
+                         if p.name.lower() in SC3010_SLIDE_PDFS]
+        for pdf in sc3010_slides:
             nb_id = await seed_slides(db, pdf, course_id, section_order)
             if nb_id:
                 lecture_ids.append(nb_id)
                 section_order += 1
 
-        # Article URLs (placed after slides)
-        url_file = SAMPLE_DIR / "article_url.txt"
-        if url_file.exists():
-            ids = await seed_articles(db, url_file, course_id, section_order)
-            lecture_ids.extend(ids)
-            section_order += len(ids)
-
-        # Tutorial PDFs
+        # SC3010 tutorial PDFs
         tut_order = 0
         for pdf in sorted(SAMPLE_DIR.glob("*.pdf")):
-            if "tutorial" in pdf.name.lower():
+            if pdf.name.lower() in SC3010_TUTORIAL_PDFS:
                 nb_id = await seed_tutorial(db, pdf, course_id, tut_order)
                 if nb_id:
                     tutorial_ids.append(nb_id)

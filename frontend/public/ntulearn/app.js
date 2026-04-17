@@ -1138,16 +1138,7 @@ async function fetchAndApplyBackendData() {
         const focusEl = document.getElementById('ns-stat-focus');
         if (focusEl) focusEl.textContent = focusTimeStr;
 
-        // 2. Quick Insights (dashboard sidebar)
-        const recs = data.weekly_report.prescriptive_analysis.recommendations.slice(0, 3);
-        const insightsList = document.getElementById('ns-insights-list');
-        if (insightsList && recs.length > 0) {
-            insightsList.innerHTML = recs.map(r =>
-                `<li><strong>${r.concept_name}:</strong> ${r.rationale}</li>`
-            ).join('');
-        }
-
-        // 3. Populate courseAnalyticsData['1'] with real backend concepts
+        // 2. Populate courseAnalyticsData['1'] with real backend concepts
         if (data.concepts_payload && data.concepts_payload.length > 0) {
             courseAnalyticsData['1'].concepts = data.concepts_payload.map(c => ({
                 id: c.id,
@@ -1676,39 +1667,6 @@ async function fetchPrecisionPracticeData() {
             previewBox.style.display = 'block';
         }
 
-        // ── 2. Update the Precision Practice widget ─────────────────────────
-        const ppWidget = document.getElementById('widget-practice');
-        if (ppWidget && allWeak.length > 0) {
-            const totalMins = allWeak.slice(0, 6).reduce((sum, c) => sum + c.study_time_minutes, 0);
-            const itemsHtml = allWeak.slice(0, 6).map(c => `
-                <div style="display:flex; justify-content:space-between; align-items:center;
-                            padding: 6px 0; border-bottom: 1px solid var(--ns-sidebar-border);">
-                    <div>
-                        <div style="font-weight:600; font-size:0.85rem;">${c.name}</div>
-                        <div style="font-size:0.75rem; color:var(--ns-text-muted);">${c.subject_display} · ${c.difficulty}</div>
-                    </div>
-                    <div style="text-align:right; flex-shrink:0;">
-                        <div style="color:var(--ns-danger); font-weight:700; font-size:0.85rem;">${c.mastery_pct}%</div>
-                        <div style="font-size:0.75rem; color:var(--ns-text-muted);">~${c.study_time_minutes}m</div>
-                    </div>
-                </div>
-            `).join('');
-
-            ppWidget.innerHTML = `
-                <button class="ns-widget-remove" data-id="widget-practice" title="Remove widget">&times;</button>
-                <h3 style="margin:0 0 4px 0;">Precision Practice</h3>
-                <p style="margin:0 0 12px 0; font-size:0.85rem; color:var(--ns-text-muted);">
-                    ${allWeak.length} weak concept${allWeak.length !== 1 ? 's' : ''} across all subjects · ~${totalMins}m total
-                </p>
-                <div style="margin-bottom:4px;">${itemsHtml}</div>
-            `;
-
-            // Re-bind remove button
-            ppWidget.querySelector('.ns-widget-remove')?.addEventListener('click', () => {
-                ppWidget.closest('.ns-widget') && ppWidget.remove();
-            });
-        }
-
     } catch (e) {
         // Non-fatal — widget falls back to static text
     }
@@ -2067,10 +2025,10 @@ function renderNsAppCourses() {
  *   const payload = await fetch('/api/course-report?course_id=' + courseId).then(r => r.json());
  */
 const courseAnalyticsData = {
-    '1': { // SC3010 — populated from backend; PDF: Lecture 4.pdf + Tutorial 3.pdf
+    '1': { // SC3010 — populated from backend; PDF: computer-security.pdf + Tutorial 3.pdf
         name: 'Computer Security',
         code: 'SC3010',
-        pdfSource: 'Lecture 4.pdf',
+        pdfSource: 'computer-security.pdf',
         focusTime: '--',
         concepts: [],
         backendRecommendations: [],
@@ -2265,10 +2223,7 @@ function renderCourseAnalytics(courseId) {
     renderConceptTableFilters(annotated);
     renderConceptTable(annotated);
 
-    // 6. Quick Insights
-    renderQuickInsights(annotated);
-
-    // 7. Exam Readiness card in sidebar
+    // 6. Exam Readiness card in sidebar
     renderAnalyticsReadinessCard(courseId);
 }
 

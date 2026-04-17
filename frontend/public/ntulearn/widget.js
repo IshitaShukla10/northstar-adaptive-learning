@@ -51,39 +51,12 @@ document.addEventListener("DOMContentLoaded", () => {
             `,
             target: ".ns-dashboard-top"
         },
-        {
-            id: "widget-practice",
-            title: "Precision Practice",
-            html: `
-                <div class="ns-card ns-action-card ns-widget" id="widget-practice">
-                    <button class="ns-widget-remove" data-id="widget-practice" title="Remove widget">&times;</button>
-                    <h3>Precision Practice</h3>
-                    <p>Target your weakest areas across all courses.</p>
-                    <button class="ns-btn-primary full-width">Start Session</button>
-                </div>
-            `,
-            target: ".ns-courses-sidebar"
-        },
-        {
-            id: "widget-insights",
-            title: "Quick Insights",
-            html: `
-                <div class="ns-card ns-insights-card ns-widget" id="widget-insights">
-                    <button class="ns-widget-remove" data-id="widget-insights" title="Remove widget">&times;</button>
-                    <h3>Quick Insights</h3>
-                    <ul class="ns-insights-list" id="ns-insights-list">
-                        <li><strong>Machine Learning:</strong> You are struggling with Regularization. Review recommended.</li>
-                        <li><strong>Data Structures:</strong> Graph traversals mastery is up 15%.</li>
-                        <li><strong>Optimization:</strong> Assignment 2 predicted score is 90%.</li>
-                    </ul>
-                </div>
-            `,
-            target: ".ns-courses-sidebar"
-        }
     ];
 
-    // Read stored widgets or display defaults
-    let activeWidgets = JSON.parse(localStorage.getItem("ns-dashboard-widgets")) || WIDGETS.map(w => w.id);
+    // Read stored widgets — filter out any removed widget IDs so stale cache never resurrects them
+    const validIds = new Set(WIDGETS.map(w => w.id));
+    const stored = JSON.parse(localStorage.getItem("ns-dashboard-widgets"));
+    let activeWidgets = stored ? stored.filter(id => validIds.has(id)) : WIDGETS.map(w => w.id);
 
     function saveWidgets() {
         localStorage.setItem("ns-dashboard-widgets", JSON.stringify(activeWidgets));
