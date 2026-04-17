@@ -1,6 +1,6 @@
 # NorthStar — Adaptive Learning Engine for Blackboard Study Mode
 
-> **Microsoft Track Hackathon · Topic 8 (X-as-a-Service)**
+> **Topic 8 (X-as-a-Service)**
 
 NorthStar is an AI-driven adaptive learning engine designed to plug into any Learning Management System (LMS). It models each student's evolving knowledge state and outputs personalised study plans, priority rankings, and prescriptive coaching — all through a clean REST API.
 
